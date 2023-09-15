@@ -100,3 +100,11 @@ AWS CloudFormation
 또한 스택을 관리할 때 수행해야 할 작업들을 결정하고, 오류를 감지하면 변경 사항을 자동으로 롤백한다. 
 
 
+## 모듈 3 요약
+
+- 리전 및 가용 영역
+- 엣지 로케이션 및 Amazon CloudFront
+- AWS Management Console, AWS CLI 및 SDK
+- AWS Elastic Beanstalk
+- AWS CloudFormation
+
