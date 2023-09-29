@@ -120,3 +120,8 @@ AWS Marketplace - Independent Software Vendor(ISV)의 소프트웨어 리스팅 
 인프라 제품, 비지니스 어플리케이션, 데이터 제품 및 DevOps와 같은 여러 범주의 제품을 제공한다.
 
 ## 모듈8 요약
+
+- AWS 프리 티어에 포함된 세 가지 유형의 제품: 12개월 무료, 상시 무료, 평가판
+- AWS Organizations의 통합 결제의 이점
+- 네 가지 AWS Support 플랜: Basic, Developer, Business 및 Enterprise간의 차이점
+- AWS Marketplace에서 소프트웨어를 검색하는 방법
