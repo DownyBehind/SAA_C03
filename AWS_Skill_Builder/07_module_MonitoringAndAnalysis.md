@@ -51,3 +51,9 @@ AWS Management Console에서 Trusted Advisor 대시보드에 엑세스하면 위
 - 녹색: 문제가 감지되지 않은 항목의 수
 - 주황색: 권장 조사 항목의 수
 - 빨간색: 권장 조치의 수
+
+## 모듈 7 요약
+
+- Amazon CloudWatch
+- AWS CloudTrail
+- AWS Trusted Advisor
