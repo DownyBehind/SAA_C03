@@ -244,4 +244,39 @@ NLB - 다중 지원 가능, SNI
 
 짧은 요청의 경우에는 낮은 값으로 설정하는 것이 좋다.
 
-## Auto Sacling Group (ASG) basic
+## Auto Scaling Group (ASG) basic
+
+우리가 운영하는 웹사이트에 방문하는 사람이 증가할 수도 있다.
+클라우드 환경에서는 원하는대로 서버를 늘리거나 줄일 수 있다.
+
+ASG(Auto scaling Group)의 목표는
+
+- 증가하는 부하에 맞춰 EC2 instance를 추가한다. (Scale out)
+- 감소하는 부하에 맞춰 EC2 instance를 제거한다. (Scale in)
+
+ASG의 크기는 시간이 지날 수록 변하고, 매개변수로 최소, 최대 값을 정할 수 있다.
+자동으로 새로운 instance를 LB에 등록할 수 있다.
+또 다른 기능으로 instance의 health가 비정상이면 종료하고 재 생성한다.
+
+ASG 기능 자체는 무료고 생성된 서버 비용만 내면 된다.
+
+- minimun capacity
+- Desired capacity
+- maximum capacity
+
+ASG를 위해서는 Launch Template를 사용하는데,
+
+- AMI + Instance type
+- EC2 User Data
+- EBS Volumes
+- Security Groups
+- SSH key Pair
+- IAM Roles for your EC2 Instances
+- Network + Subnets Information
+- Load Balancer Information
+- Min Size/ Max Size/ Initial Capacity
+
+CloutWatch alarm
+
+- 특정 지표가 어떤 조건이 되면 경보가 울리게 할 수 있다.
+- triggering 되면 scale in/ out 하게 연결할 수 있다.
