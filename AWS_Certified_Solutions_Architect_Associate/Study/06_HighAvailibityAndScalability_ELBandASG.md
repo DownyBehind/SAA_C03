@@ -280,3 +280,34 @@ CloutWatch alarm
 
 - 특정 지표가 어떤 조건이 되면 경보가 울리게 할 수 있다.
 - triggering 되면 scale in/ out 하게 연결할 수 있다.
+
+## Auto Scaling Groups - Dynamics Scaling Policies
+
+1. Target Tracking Scaling
+
+   - 가장 설정하기 쉽다.
+   - Ex. 평균 ASG CPU를 40% 가량으로 유지하고 싶을 때 사용한다.
+   - 기본 기준점을 정하고 유지하게 할 수 있다.
+
+2. Simple/Step Scaling
+
+   - CloudWatch 알람이 울릴 때(CPU > 70%) 2개 추가
+   - CloudWatch 알람이 울릴 때(CPU < 30%) 1개 제거
+
+3. Scheduled Actions
+   - 알려진 패턴을 기반으로 스케일링을 예측한다.
+   - Ex. 금요일 5시에는 min capacity를 10으로 증가시킨다.
+
+## Auto Scaling Groups - Predictive Scaling
+
+1. Predictive Scaling
+   - Continuosly forecast load and schedule scaling ahead
+
+참고할 지표들
+
+CPU 사용량, 타겟 별 요청 수, 평균 업로드 다운로드 수, 어떤 커스텀 메트릭 들
+
+## Auto Scaling Groups - Scaling Cooldowns
+
+    - 매 Scaling 후에 휴지기를 갖는다. (default 300s)
+    - 휴지기에는 인스턴스를 추가하거나 종료할 수 없다.
