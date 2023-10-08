@@ -209,3 +209,147 @@ Aurora Machine Learing
 - Aurora와 다양한 머신러닝 서비스간의 간단하고 최적화되고 안전한 통합이다.
 
 ## RDS & Aurora - 백업과 모니터링
+
+RDS Backups - Automated Backups : Daily full backup of the database (during the backup window)
+
+5분 마다 트랜잭션 백업이 진행된다.
+따라서 자동 백업으로 5분 전으로 복구될 수 있고 이 백업 보존 기간은 1 ~ 35일 중에 설정 가능하고, 0이면 사용안함
+
+Manual DB Snapshot
+
+- 수동으로 한 백업을 원하는 기간동안 보관할 수 있다.
+
+한달에 2시간 만 사용하는 데이터베이스의 경우에 굳이 사용안하는 기간동안 RDS 데이터 유지비용을 낼 필요가 없다.
+따라서 사용하지 않을 때는 수동 스냅샷을 찍고, 다시 사용할 때 해당 디비를 복구시키면 비용을 절감할 수 있다.
+
+Aurora Backups
+
+- 1 ~ 35일 자동 백업 - 비활성화 불가능
+- 시점 복구 기능이 있다.
+
+Manual DB snapshot
+
+- 수동으로 트리거 할 수 있고, 원하는 만큼 유지할 수 있다.
+
+RDS & Aurora Restore options
+
+1. RDS/Aurora 모두 수동 백업을 복구할 때 새로운 디비로 복구 가능하다.
+
+2. 또 다른 옵션으로는 S3에서 MySQL DB를 복구할 수 있다.
+
+   - Create a backup of your on-premises database
+   - Store it on Amazon S3 (object storage)
+   - Restore the backup file onto a new RDS instance running MySQL
+
+3. Restoring MySQL Aurora cluster from S3
+   - Create a backup of your on-premises database using Percona XtraBackup
+   - Store the backup file on Amazon S3
+   - Restore the backup file onto a new Aurora cluster running MySQL
+
+Aurora Database Cloning
+
+기존 데이터베이스에서 새로운 Aurora DB를 만들 수 있다.
+스냅샷을 찍고 복원하는 것보다 빠른데 이유는 copy-on-write 프로토콜을 사용하기 때문이다.
+
+빠르고 비용 효율적며 기존 디비에 영향을 주지않는다.
+
+## RDS Security
+
+저장된 데이터를 암호화할 수 있다.
+AWS KMS를 이용해 마스터와 복제본에 암호화할 수 있다.
+만약에 마스터를 암호화하지 않으면 복제본도 암호화할 수 없다.
+
+암호화되지 않은 디비를 암호화하려면 스냅샷을 생성해서 암호화하고 복원하는 과정을 거쳐야 한다.
+
+- In-flight encryption : TLS-ready by default, use the AWSTLS root certificates client-side
+
+- IAM Authentication : IAM roles to connect your database (instead of username/pw)
+- Security Groups : Control Network access to your RDS / Aurora DB
+- No SSH available : except on RDS custom
+- Audit Logs can be enabled and sent to CloudWatch Logs for longer retention
+
+## RDS Proxy
+
+Fully managed database proxy for RDS
+프록시를 사용하면 디비 연결풀을 형성하고 사용할 수 있다.
+
+Allows apps to pool and share DB connections established with DB
+
+Improving DB efficiency by reducing the stress on DB resources and minimize open connections
+
+Serverless, autoscaling highly available (multi-AZ)
+프록시로 장애시간을 66% 줄일 수 있다.
+MySQL, PostgreSQL, MariaDB 그리고 Aurora에서 지원한다.
+
+앱 코드 바꿀 필요없이 RDS로의 연결을 RDS 프록시로 변경하면 사용할 수 있다.
+
+RDS는 퍼블릭 엑세스가 불가능하므로 VPC에서만 사용 가능하다.
+
+## ElastiCache
+
+Redis 또는 Memcached를 관리하는 것을 도와준다.
+캐시는 인 메모리 DB이며 자주 사용하는 데이터를 저장하는데 사용한다.
+
+디비 캐시 원리
+
+앱이 쿼리를 보낸다. 이때 캐시에 해당 내용이 있으면 즉각적으로 응답을 하지만 없을 경우, 디비로 가서 해당 값을 읽어온다. 이때 읽은 내용을 캐시에 써놓으면 다음 번에 같은 쿼리를 보내면 즉각적으로 응답할 수 있게 된다.
+
+즉각적으로 응답하는 것을 cache hit, 응답하지 못하는 것을 cache miss라고 한다.
+
+- Cache must have an invalidation strategy to make sure only the most current data is used in there. -> 어려운 기술이다.
+
+User Session Store
+
+사용자가 앱에 로그인하면, 해당 세션 데이터를 캐시에 저장한ㄴ다.
+사용자가 이후에 다른 인스턴스를 통해 로그인하더라도 해당 세션 상태가 캐시에 있으므로 재 로그인할 필요가 없다.
+
+Redis : 자동 장애 조치 기능이 있는 Multi-AZ가 있고, 읽기 복제본이 있다. 백업과 복구가 있다.
+Supports Sets and Stored Sets : 복제되는 캐시이다. 따라서 가용성과 내구성이 뛰어나다.
+
+Mamcached : 데이터 분할을 위한 멀티 노드 (sharding), 저 가용성, 백업이나 복구가 없다. Multi-threaded architecture
+
+## 솔루션 설계자를 위한 ElastiCache
+
+- ElastiCache supports IAM Authentication for Redis
+
+- IAM policies on ElastiCache are only used for AWS API-level security
+- Redis AUTH
+
+  - you can set a "password/token" when you create a Redis cluster
+  - 보안 그룹 추가로 캐시에 추가적인 보안레벨 부여
+  - SSL in flight encryption 제공
+
+- Memcached
+  - Supports SASL-based authentication(advanced)
+
+## Pattern for ElastiCahce
+
+- Lazy Loading : all the read data is cahced, data can become stale in cache
+- Write Through : Adds or update data in the cache when written to a DB (no stale data)
+- Session Store : store temporary session data in a cache(using TTL features)
+
+Redis Use Case
+
+- 게이밍 리더 보드 만들기
+
+* Redis Sorted sets guarantee both uniqueness and element ordering
+* Each time a new element added, it's ranked in real time, then added in correct order
+
+## 친숙한 포트 목록
+
+중요한 포트
+
+FTP : 21
+SSH : 22
+SFTP : 22 (SSH와 같은)
+HTTP : 80
+HTTPS : 443
+
+vs RDS 데이터베이스 포트 :
+
+PostgreSQL : 5432
+MySQL : 3306
+Oracle RDS : 1521
+MSSQL Server : 1433
+MariaDB : 3306 (MySQL과 같음)
+Aurora : 5432 (PostgreSQL와 호환 시), 3306(MySQL과 호환 시)
