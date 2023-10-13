@@ -1,26 +1,188 @@
 # 솔루션 설계자 관점의 서버리스 개요
 
-데이터를 빠르게 검증해보고 싶을 때 주로 사용
+## 서버리스 소개
 
- 
+서버를 관리할 필요가 없다. 서버가 없는다는게 아니다.
+
+그냥 함수를 배치하는 것이다.
+AWS Lambda가 시초였다.
+
+서버를 프로비저닝하지 않는 것을 의미한다.
+
+## Lambda 개요
+
+람다는 가상의 함수다.
+
+제한시간이 있긴 한데 15분이다.
+온 디멘드로 실행되고 과금된다. (사용 안하면 돈 안나감)
+스케일링이 자동이다.
+
+청구가 편하다. - 요청과 처리 시간에 따라 과금
+여러 언어를 쓸 수 있다.
+
+함수 당 최대 10GB의 램을 프로비저닝할 수 있다.
+그리고 램을 증가시키면, CPU와 네트워크도 향상된다.
+
+- 지원 언어 : Node.js, python, java, c#, Golang, Ruby ...
+
+람다 컨테이너 이미지 : 이미지 자체가 람다 런타임 API를 구현해야 한다.
+람다와 ECS를 같이 쓸 때, 람다 컨테이너 이미지에서 람다 런타임 API를 구현하지 않으면, ECS나 Fargate에서 컨테이너를 실행해야한다.
+
+람다 가격 정보
+
+- 호출 당 청구, 첫 1,000,000은 무료다
+- 1ms당 청구된다. (400,000GB-S은 무료다.)
+
+## Lambda 제한
+
+한도는 리전 당 조재한다.
+
+- 실행 한도 :
+  메모리 할당량 : 128MB ~ 10GB (1MB increments)
+  최대 실행 시간 : 900s (15분)
+  환경 변수 4KB
+  임시 공간 (/tmp) 512MB ~ 10GB
+  최대 1000개 까지 동시 호출 가능
+  동시성은 예약하는 게 좋다
+
+- 배포 한도 :
+  람다 함수 배포 사이즈 (compressed .zip) : 50MB
+  비 암축 배포 사이즈 (code + dependencies) : 250MB
+  시작 시 크기가 큰 파일은 /tmp 사용
+  배포 환경 변수 4KB
+
+## Lambda@엣지 & CloudFront Functions
+
+보통은 함수와 앱을 특정 리전에 배포하지만 CloudFront를 사용할 때는 엣지 로케이션을 통해 콘텐츠를 배포한다.
+모든 앱에는 앱에 도달 전에 엣지에서 로직을 실행하도록 요구하기도 한다.
+
+이것을 엣지 함수(Edge Function)이라고 하며,
+CloudFront 배포에 붙여서 쓰는 코드다.
+이 함수는 사용자 근처에서 실행해서 지연시간을 최소화하는 것이 목적이다.
+
+종류는 2개인데 CloudFront 함수와 Lambda@Edge이다.
+
+엣지함수를 쓰면 서버를 관리할 필요가 없다.
+
+usecase : CDN 컨텐츠 커스터마이즈
+사용한 만큼 비용 지불
+
+사용 예
+
+- 웹사이트 보안 및 프라이버시
+- 동적 웹 앱
+- SEO(검색 엔진 최적화)
+- Origin to Data Center 지능형 경로
+- 봇 완화
+- 실시간 이미지 변환
+- A/B Testing
+- 사용자 인증 및 권한 부여
+- 사용자 우선순위 지정
+- 사용자 추적 및 분석
+
+CloudFront Functions
+
+- 자바스크립트로 작성된 경량 함수
+- 확장성이 높고 지연시간에 민감한 CDN 사용자 지정에 사용된다.
+- 시작시간은 1ms 미만이며, 초당 백만 개 요청 처리
+- 뷰어 요청과 응답을 수정할 때만 사용한다.
+  - Viewer Request : 클라우드프론트가 뷰어에게 요청 받은 후
+  - Viewer Response : 클라우드프론트가 뷰어에게 응답 하기 전
+- 모든 코드는 클라우드프론트에서 관리, 고성능, 고확장이 필요한 뷰어 요청, 뷰어 응답에만 사용된다.
+
+Lambda@Edge
+
+- 파이썬이나 노드로 작성
+- 초당 1000개 수행
+- 모든 응답 요청을 변경할 수 있다.
+  - Viewer Request : 클라우드프론트가 뷰어에게 요청 받은 후
+  - Origin Request : 클라우드 프론트가 오리진에게 요청 전송 전
+  - Viewer Response : 클라우드프론트가 뷰어에게 응답 하기 전
+  - Origin Response : 클라우드프론트가 뷰어에게 응답 받은 후
+- 함수는 us-east-1에서만 작성할 수 있다. (클라우드프론트 배포를 관리하는 리전이다.)
+- 함수를 작성하면 모든 엣지에서 복사한다.
+
+클라우드 함수 : 캐시 키 노말라이제이션 - 요청 속성을 변환하여 캐시 키 생성, 요청, 응답 HTTP 헤더 삽입, 수정, 삭제하도록 헤더 조작, URL 다시 쓰거나 리디렉션, JWT 생성, 검증 : 모든 작업이 1ms 이내 처리
+
+람다 엣지 : 실행시간은 10초가 걸릴 수도 있다. 라이브러리 의존이 높을 수 있다. 네트워크 엑세스를 통해 외부 서비스도 사용하여 대규모 데이터 통합도 수행 가능, 파일 시스템이나 HTTP 요청에도 바로 엑세스할 수 있다.
+
+## Lambda in VPC
+
+람다 함수를 시작하면 VPC 외부에서 시작한다.
+따라서 VPC 내 리소스에 접근할 권한이 없다.
+
+람다는 퍼블릭 인터넷이나 Dynamo DB는 기본적으로 접근 가능하다.
+하지만 Private RDS에는 연결 불가
+
+해결을 위해서는 VPC 내에서 Lambda를 시작해야 한다.
+
+이렇게 하려면, VPC ID, 서브넷 그리고 보안그룹을 람다함수에 추가해야 한다.
+그러면 람다가 서브넷에 ENI(Elastic Network Interface)를 생성해 VPC 내의 프라빗 리소스에 엑세스 할 수 있게 된다.
+
+Lambda with RDS Proxy
+
+람다가 위와 같은 방법으로 프라이빗 RDS에 접근할 수는 있지만, 문제는 람다함수는 요청이 많으면 여러개가 생기기도 해서 RDS에 전부 각자 연결되기에 부하가 커져 시간 초과등이 생길 수 있다.
+
+이를 해결하는 방법이 RDS Proxy이다.
+
+Proxy가 람다에서의 연결을 하나로 모아서 RDS와의 연결을 줄인다.
+
+- DB 연결의 풀링과 공유를 통해 확장성 향상
+- 장애가 발생한 경우, 장애 조치 시간을 66%나 줄여 가용성을 향상시키고 연결을 보존한다.
+- RDS 프록시 수준에서 IAM 인증을 강제하여, 보안을 높일 수 있고, 자격 증명은 Secrets Manager에 저장된다.
+
+람다 함수가 RDS 프록시에 연결할 수 있으려면, VPC에서 람다함수를 시작해야 한다.
+
+## RDS - 람다 호출 및 이벤트 알림
+
+DB instance 안에서 람다함수를 호출한다면, 데이터 이벤트를 처리할 수 있다.
+이건 RDS for PostgreSQL과 Aurora MySQL에 지원된다.
+
+컨셉은 사용자가 DB에 등록을 하면, RDS가 람다함수를 직접 호출하는 식이다.
+RDS DB intance로 부터 람다함수로 오는 아웃바운드 트레픽을 허용해야한다.
+람다 함수를 호출하기 위한 권한도 있어야 한다. (Lambda Resource-based Policy & IAM Policy)
+
+RDS Event Notificaton
+
+DB 내에 데이터에 대한 정보가 아니라 각종 이벤트에 대한 알림을 받는다.
+전달 시간이 최대 5분인 근 실시간 이벤트를 받아서 SNS에 전송하거나 EventBridge에서 가져갈 수도 있다.
+
+## Amazon DynamicDB 개요
+
+키 & 밸류
+완전 관리형, 고가용성 다중 AZ
+방대한 워크로드 확장이 가능하다.
+
+초당 수백만개 요청 처리 가능
+성능은 한 자리수 밀리초, 일관성도 높다.
+
+보안 관련 기능은 IAM과 통합
+비용이 적고 ASG탑체
+프로비저닝 필요 없다.
+
+타입은 2가지 이다. Standard & Infrequent Access
+
+DynamoDB는 테이블로 구성됨
+각 테이블에는 Primary Key가 있다.
+각 테이블은 무한대로 아이템 가질 수 있다.
+각 아이템은 Attribute를 가진다.
+아이템 당 최대 사이즈는 400KB - 큰 객체에는 적합하지 않다.
+
+스키마를 빠르게 전개할 때 적합하다.
+
+# 솔루션 설계자 관점의 서버리스 개요
+
+데이터를 빠르게 검증해보고 싶을 때 주로 사용
 
 다이나모 - 테이블 예제
 
- 
+Primary Key ----------------------- Attributes
 
-Primary Key  -----------------------  Attributes
-
-ㄴ Partition key + Sort Key             ㄴ Score Result
-
- 
+ㄴ Partition key + Sort Key ㄴ Score Result
 
 속성은 null로 설정하거나 추가할 수 있다.
 
- 
-
 Dynamo DB를 쓰려면 Read/Write Capacity Mode도 설정해야 한다.
-
- 
 
 - Provisioned Mode (default) : 초당 읽고/쓰는 횟수를 정해서, 용량을 미리 정한다.
 
@@ -28,23 +190,15 @@ Dynamo DB를 쓰려면 Read/Write Capacity Mode도 설정해야 한다.
 
 ASG도 사용 가능하다.
 
- 
-
 - On-Demand Mode : 워크로드에 따라 자동으로 증감하므로, RCU, WCU 개념이 없다. 사전 계획이 필요없다.
 
 사용한 만큼 돈을 지불한다. 워크로드를 예측할 수 없거나 급격히 증가하는 경우에 유용하다.
 
 수천개의 트랜젝션이 수백만개로 1분 내로 확장해야 하는 앱에 한해서는 이 모드를 사용하는게 적합하다.
 
- 
-
 ## Amazon DynamoDB 심화기능
 
- 
-
 DynamoDB Accelerator(DAX)
-
- 
 
 - 다이나모디비를 위한 고가용성의 완전 관리형 무결점 인메모리 캐시
 
@@ -56,31 +210,19 @@ DynamoDB Accelerator(DAX)
 
 - 캐시를 위한 TTL은 기본 5분이며 변경 가능하다.
 
- 
-
 ElastiCache 대신에 DAX를 쓰는 이유는?
-
- 
 
 - DAX는 다이나모디비 앞에 있고, 개별 객체 캐시와 쿼리와 스캔 캐시를 처리하는데 유용하다.
 
 - 집계 결과를 저장할 때는 ElastiCache가 좋다. - 대용량의 연산을 저장할 때
 
- 
-
 DynamoDB - 스트리밍 프로세스
 
- 
-
 테이블의 모든 수정 사항(생성/업데이트/삭제 등)에 대한 스트림 생성 가능
-
- 
 
 사용자 테이블에 새로운 사용자가 등록되었을 때, 환영 이메일을 보내는 등 다이나모디비 테이블의 변경 사항에
 
 실시간으로 반응하는데 활용할 수 있다.
-
- 
 
 - 실시간으로 응답하고
 
@@ -92,8 +234,6 @@ DynamoDB - 스트리밍 프로세스
 
 - 디비 변경에 따른 람다 함수 호출도 가능하다.
 
- 
-
 1. DynamoDB Streams
 
 - 24시간 보존되며
@@ -101,8 +241,6 @@ DynamoDB - 스트리밍 프로세스
 - 소비자 수가 제한된다
 
 - 람다 트리거랑 같이 쓰면 좋고, 자체적으로 읽으려면 DynomoDB Stream Kinesis 어댑터를 쓴다.
-
- 
 
 2. Kinesis Data Streams
 
@@ -114,23 +252,15 @@ DynamoDB - 스트리밍 프로세스
 
 - 데이터를 처리하는 방법이 더 많다.
 
- 
-
 글로벌 테이블 : 여러 리전 간에 복제가 가능한 테이블
 
 서로 다른 리전에 있는 테이블끼리 양방향 복제가 가능하다.
-
- 
 
 여러 리전에서 낮은 지연시간으로 서로 엑세스하게 해준다.
 
 서로 복제가 가능하므로, 앱이 모든 리전에서 테이블을 읽고 쓸 수 있다는 말이다.
 
- 
-
 TTL(Time To Live)
-
- 
 
 - 만료 타임스탬프가 지나면 자동으로 항목을 삭제하는 기능
 
@@ -138,21 +268,13 @@ TTL을 Attribute에 추가할 수 있고, 에포크 타음스템프가 TTL을 �
 
 삭제를 하는 개념이다.
 
- 
-
 예를 들어 몇 년 뒤 삭제해야하는 규정이 있는 경우 적용할 수 있다.
 
- 
-
 자주 등장하는 예제는 웹 세션 저장입니다.
-
- 
 
 사용자가 웹에 접속하면 다이나모디비에 두 시간 정도 저장한다.
 
 여기에 세션 데이터를 저장하면 모든 앱이 엑세스할 수 있고, 두 시간 뒤 ExpTime이 갱신되지 않으면 만료되어 삭제될 것이다.
-
- 
 
 재해복구에도 다이나모디비를 활용한다.
 
@@ -164,7 +286,7 @@ TTL을 Attribute에 추가할 수 있고, 에포크 타음스템프가 TTL을 �
 
            ㄴ 복구를 진행할 경우, 새로운 테이블을 생성한다.
 
-          
+
 
 - 온 디멘드 백업
 
@@ -176,7 +298,7 @@ TTL을 Attribute에 추가할 수 있고, 에포크 타음스템프가 TTL을 �
 
            ㄴ 이 옵션 또한 백업으로 복구를 진행하면, 새로운 테이블이 생성된다.
 
-          
+
 
 - DynamoDB - Amazon S3간 통합
 
@@ -186,45 +308,27 @@ S3로 테이블을 보낼 수 있는데, PITR을 활성화해야 한다.
 
 분석 목적이나 감사 목적으로 내보낼 수 있다.
 
- 
-
 S3에서 테이블을 가져올 수도 있다.
 
 CSV, JSON, ION 형시으로 보낸 뒤, 새로운 DB 테이블을 생성하는 식이다.
 
 가져올 때 발생하는 오류는 모두 CloudWatch Log에 기록된다.
 
- 
-
 ## API GateWay 개요
-
- 
 
 람다함수에서 API의 데이터베이스로 다이나모디비를 사용할 수 있으며, 테이블 CRUD를 할 수 있다.
 
 클랑언트도 이 람다 함수를 지연 호출하게 하고 싶다.
 
- 
-
- 
-
 클라이언트 ---- API GateWay ---- 람다 ---- 다이나모디비
-
- 
 
 클라이언트는 API Gateway에 REST API로 요청하고, API GateWay는 람다에 프록시 요청을 보낸다.
 
 그리고 람다는 다시 다이나모 디비에 CRUD 요청을 보내는 식이다.
 
- 
-
 API Gateway를 사용하는 이유는 HTTP Endpoint 뿐 아니라 다양한 기능들 에를 들어 인증부터, 사용량 계획, 개발 단계 등의 기능을 제공하기 때문이다.
 
- 
-
 AWS Lamda + API Gateway : 인프라 구축이 필요없다.
-
- 
 
 WebSocket 프로토콜을 지원한다.
 
@@ -238,11 +342,7 @@ API key 생성할 수 있고, 클라언트 요청이 과도할 때, 요청을 �
 
 Swagger / 오픈 API를 통해 신속하게 API 정의를 가져올 수 있다.
 
- 
-
 API Gateway - Integrations High Level
-
- 
 
 - Lambda Function
 
@@ -250,13 +350,13 @@ API Gateway - Integrations High Level
 
            - 람다함수를 REST API로 노출시키는 일반적이고 간단한 방법
 
-          
+
 
 - HTTP
 
            - HTTP endpoint를 노출시킬 수 있다.
 
-          
+
 
 - AWS Service
 
@@ -264,23 +364,15 @@ API Gateway - Integrations High Level
 
            - AWS Step Function workflow를 시작하거나, SQS에 메시지를 보낼 수도 있다.
 
-          
+
 
 예시
 
- 
-
 클라이언트 ---- API GATEWAY ---- Kinesis Data Streams ---- Kinesis Data firehose ---- Amazon S3
-
- 
 
 API gateway의 장점은 AWS 서비스를 외부에 노출시킨다는 점이다.
 
- 
-
 API Gateway를 노출시키는 방법을 Endpoint Type이라고 하는데
-
- 
 
 1. Edge-Optimized (default): For global clients
 
@@ -290,13 +382,9 @@ API Gateway를 노출시키는 방법을 Endpoint Type이라고 하는데
 
 - API Gateway는 생성된 리전에 있지만, 모든 클라우드프론트 엣지 로케이션에 의해 엑세스될 수 있다.
 
- 
-
 2. Reginal : 같은 리전 사용자
 
 - 자체 클라우드프로트 배포를 할 수 있다. 캐싱과 배포에 더 많은 권한을 가질 수 있다.
-
- 
 
 3. private : VPC 내에서만 접근 가능
 
@@ -304,13 +392,7 @@ API Gateway를 노출시키는 방법을 Endpoint Type이라고 하는데
 
 - 엑세스 정의는 리소스 정책을 사용한다.
 
- 
-
- 
-
 보안
-
- 
 
 IAM role : 내부 앱에 유용
 
@@ -318,19 +400,11 @@ Cognito : 외부 사용자
 
 Custom Auhorizer : 내 로직
 
- 
-
 Custom Domain Name HTTPS security through integraton with AWS Certificate Manager(ACM)
-
- 
 
 ## Amazon Step Functions
 
- 
-
 람다함수를 이용하여 시각적인 워크프로를 만드는 것
-
- 
 
 각 단계의 성공, 실패에 따라 어떤 걸 수행하는지 정의합니다.
 
@@ -338,19 +412,11 @@ Custom Domain Name HTTPS security through integraton with AWS Certificate Manage
 
 EC2, ECS, 온프레미스 서버, API GateWay, SQS 큐등을 넣을 수 있다.
 
- 
-
 중간에 사람이 승인해야 넘어갈 수 있는 단계를 넣을 수도 있다.
-
- 
 
 ## Amazon Cognito 개요
 
- 
-
 사용자에게 웹이나 앱에 상호작용할 수 있는 자격증명을 준다.
-
- 
 
 - Cognito User Pools:
 
@@ -358,7 +424,7 @@ EC2, ECS, 온프레미스 서버, API GateWay, SQS 큐등을 넣을 수 있다.
 
            - Integrate with API Gateway & Applicaton Load Balancer
 
-          
+
 
            - 서버리스 데이터 베이스이다.
 
@@ -368,17 +434,17 @@ EC2, ECS, 온프레미스 서버, API GateWay, SQS 큐등을 넣을 수 있다.
 
            - Facebook, Google과 통합할 수 있다.
 
-          
+
 
            사용자가 Cognito를 통해 토큰을 받으면, 해당 토큰으로 API Gateway에 REST API로 토큰을 보내고,
 
            Congito를 통해 인증받으면, 사용 자격을 얻고 람다 함수로 가게 된다.
 
-          
+
 
            다른 방법으로는 Cognito 앞에 ALB을 놓고 먼저 인증을 받고 나면 ALB가 타겟 그룹으로 리다이렉트하는 식으로 쓸 수도 있다.
 
-          
+
 
 - Cognito Identity Pools (Federated Identity):
 
@@ -386,7 +452,7 @@ EC2, ECS, 온프레미스 서버, API GateWay, SQS 큐등을 넣을 수 있다.
 
            - Cognito User Pool과 원활히 통합된다.
 
-          
+
 
            - 사용자에게 자격증명을 주지만, 임시 자격증명으로 AWS 계정에 직접 접근한다.
 
@@ -396,10 +462,8 @@ EC2, ECS, 온프레미스 서버, API GateWay, SQS 큐등을 넣을 수 있다.
 
            - 인증된 사용자나 게스트 유저에게 Default IAM role을 부여할 수도 있다.
 
-          
+
 
 IAM에도 사용자를 다루는 기능이 있지만, Cognito는 외부의 웹가 앱 사용자를 대상으로 한다.
-
- 
 
 수백명의 사용자, 모바일 사용자, SAML을 통한 인증 같은 내용이 나오면 Cognito를 찾아보자
