@@ -181,3 +181,86 @@ IAM Policy Evaluation Logic
 중간 중간 어떤 평가 요소가 있는지 이해하면 된다.
 
 ## AWS IAM identity Center
+
+- 한 번 로그인하면 되는 서비스 (AWS Single Sign-On)
+- AWS accounts in AWS Organizaions
+
+  - Business cloud applications (e.g., Salesforce, Box, Microsoft 365, ...)
+  - SAML2.0-enabled application
+  - EC2 Windows Instances
+
+- Identity providers - 자격증명이 저장되는 위치
+  - Built-in identity store in IAM Identity Center
+  - 3rd Party: Active Directory(AD), OneLogin, Okta,...
+
+IAM Identity Center Fine-grained Permissions and Assignments
+-> 로그인했다고 해서 권한까지 가지는건 아니다. 권한을 주는 절차를 거쳐야 한다.
+
+- Multi-Account Permissions
+
+  - AWS OS 내에 여러 계정의 Access를 관리할 수 있다.
+  - Permission Sets
+    - 사용자를 Group에 할당하는 하나 이상의 IAM policy를 정의한다.
+    - AWS가 사용자에게 어떤 서비스에 접근가능한지 정의해준다.
+    - 결국 사용자가 이 방법으로 로그인하고 특정 서비스에 접근하는 순간 이 권한 셋이 붙어서 권한을 갖게 된다.
+
+- Application Assignments
+
+- Attribute-Based Access Control (ABAC)
+
+## AWS 디렉토리 서비스 - 개요
+
+Microsoft Active Directory
+
+- 어떤 윈도우 서버에서도 볼 수 있다.
+- Database of object : 사용자 계정, 컴퓨터, 프린터, 파일공유, 보안 그룹이 객체가 될 수 있다.
+- 중앙집중식 보안관리 시스템이며, 계정 생성, 권한 할당 등의 작업이 가능하다.
+
+모든 객체는 tree로 구성되며, tree의 그룹을 forest라고 한다.
+
+AWS Directory Services
+
+1. AWS Managed Microsoft AD
+
+   - AWS 내에 나만의 AD 생성, 유저를 로컬에서 관리할 수 있고, MFA를 지원
+   - 사용자가 있는 온프레미스 AD와 신뢰관계를 구축할 수 있다.
+   - 온프레미스와 AWS AD간에 사용자를 공유할 수 있다.
+
+2. AD Connector
+
+   - Directory Gateway(proxy)로 온프레미스 AD에 리다이렉트하며 MFA를 지원한다.
+   - 사용자는 온프레미스에서만 관리된다.
+
+3. Simple AD
+   - AD-compatible managed directory on AWS
+   - Microsoft 디렉토리를 사용하지 않으며 온프레미스 AD와도 결합하지 않는다.
+
+IAM Identity Center - Active Directory Setup
+
+- Connect to an AWS Managed Microsoft AD (Directory Service)
+
+  - integration is out of box : IAM Identity Center를 AWS 관리형 MS AD에 통합하고 연결하도록 설정하면 된다.
+
+- Connect to a Self-Managed Directory(온프레미스)
+
+  - Create Two-way Trust Relationship usin AWS Managed MS AD : AWS 관리형 MS AD를 사용해 양방향 신뢰관계를 구축하는 것이다.
+  - Create an AD Connector : IAM Identity Center와 연결한 뒤, 온프레미스와는 Proxy한다.
+
+## AWS Control Tower
+
+Easy way to set up and govern a secure and complaint multi-account AWS environment based on best practives
+
+- AWS Control Tower는 Organization을 이용하여 계정을 자동 생성한다.
+
+장점 :
+
+- 클릭 몇 번으로 환경을 세팅하고 미리 구성할 수 있다.
+- 가드레일로 정책을 관리할 수 있다.
+- 정책 위반을 감시할 수 있다.
+
+Guardrails
+
+- Control Tower 내에 모든 계정에 관한 거버넌스를 얻을 수 있다.
+- Preventive Guardrail - using SCPs(Service Contol Policies) : 계정을 무언가로부터 보호하는 것 - 모든 계정에 적용
+
+- Detective Guardrail - using AWS Config : 규정을 준수하지 않는 것을 탐지하는 것 - 계정에 테그가 지정되지 않은 리소스를 식별한다던지 등등
