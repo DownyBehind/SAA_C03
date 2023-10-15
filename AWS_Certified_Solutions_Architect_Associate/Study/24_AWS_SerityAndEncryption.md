@@ -106,3 +106,77 @@ Copying Snapshots across accounts
 3. 그리고 암호화된 스냅샷을 타겟 계정과 공유한다.
 4. 타겟 계정 안에서 스냅샷의 사본을 생성하고, 다른 고객 관리형 키를 사용해서 그 타겟 계정 안에서 암호화한다.
 5. 그러면 타겟 계정 안에서 스냅샷으로 볼륨을 생성할 수 있다.
+
+## KMS - Multi-Region Keys
+
+한 리전에 multi-region key를 생성하면, 다른 리전에 해당 키가 복제된다.
+키 ID가 완전히 동일하다.
+
+한 리전에 암호화하고 다른 리전에서 복호화할 수 있다.
+자동 교체를 활성화하면 키 교체 시 다른 리전도 같이 교체된다.
+
+- cross-Region API calls 시에 다른 키로 재 암호화 하지 않아도 된다.
+
+KMS multi-region key가 글로벌이라는 것은 아니고(즉, 하나로 다같이 쓰는 개념이 아니고) 복제하는 것이다.
+각 다중 리전 키는 자체 키 정책에 따라 독립적으로 관리된다.
+
+따라서 특정 사례를 제외하고는 사용을 권하지 않는다.
+KMS 키는 단일 리전에 제한되는 것이 더 좋기 때문이다.
+
+use case : global client-side encryption, encryption on Global DyanmoDB, Global Auroa
+
+DynamoDB Global Tables and KMS Multi Region Keys Client-side encryption
+
+- Amazon DynamoDB Encryption Client를 사용해서 DynamoDB 테이블의 특정 속성을 암호화할 수 있다.
+  즉, 데이터 자체는 암호하되어 있으므로, 테이블의 속성을 암호화해서 특정 클라이언트만 사용할 수 있게 한다. 이때 데이터베이스 관리자도 사용할 수 없게 된다.
+
+Global Aurora and KMS Multi-Region Keys Client-Side enryption
+
+- AWS Encryption SDK로 오로라 테이블의 특정 속성을 클라이언트 측에서 암호화할 수 있다.
+
+## S3 암호화된 복제
+
+한 리전에서 다른 리전으로 S3를 복사하게 되면, 기본적으로 암호화되지 않은 객체와 SSE-S3로 암호화된 객체가 복제된다.
+
+SSE-C로 암호화하면 복제가 안되는데 이유는 키를 제공할 수 없기 때문이다.
+
+SSE-KMS로 암호화하면 특정한 옵션을 활성화해야 하는데
+
+- specify which KMS key to encrypt the object within the target bucket
+- Adapt the KMS key policy for the target key
+- An IAM Role with kms:Decrypt for the source KMS Key and kms:Encrypt for the target KMS Key
+- You might get KMS throttling errors, in which case you can ask for a Service Quotas increase
+
+* You can use multi-region AWS KMS Keys, but they are currently treated as independent keys by Amazon S3 (the object will still be decrypted and then encrypted)
+
+## 암호화된 AMI 공유 프로세스
+
+AMI은 KMS 키로 암호화되어 있다.
+
+1. Must modify the image attribute to add a Launch Permission which corresponds to the specified target AWS account.
+
+2. Must share the KMS keys used to encypted the snapshot the AMI references with the target account / IAM role
+
+3. The IAM Role/User in the target account must have the permissions to DecribeKey, ReEncrypted, CreateGrant, Decrypt
+
+4. When Launching an EC2 instance from the AMI, optionally the target account can specify a new KMS key in its own account to re-encrypt the volume.
+
+## SSM Parameter Store 개요
+
+구성 및 암호를 위한 보안 스토리지
+
+Optional Seamless Encryption using KMS
+SSM Parameter Store는 서버리스이며, 확장성이 있고, 견고하며 SDK 사용도 용이하다.
+Configuration, secrets을 추적할 수 있다.
+
+보안은 IAM을 통해서, 알람은 이벤트 브릿지로부터 받을 수 있다.
+
+CloudFormation과도 통합이 된다.
+
+Parameters Policies(for advanced parameters)
+
+- Allow to assign a TTL to a parameter (expiration data) to force updating or deleting sensitive data such as passwords
+
+- Can assign multiple policies at a time
+
+## AWS Secrets Manager -개요
