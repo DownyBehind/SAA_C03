@@ -286,8 +286,6 @@ TTL을 Attribute에 추가할 수 있고, 에포크 타음스템프가 TTL을 �
 
            ㄴ 복구를 진행할 경우, 새로운 테이블을 생성한다.
 
-
-
 - 온 디멘드 백업
 
            ㄴ 이 백업은 직접 삭제할 때까지 보존된다.
@@ -297,8 +295,6 @@ TTL을 Attribute에 추가할 수 있고, 에포크 타음스템프가 TTL을 �
            ㄴ AWS 백업을 사용하면 수명 주기 정책을 활성화할 수 있고, 재해 복구 목적으로 리전 간 백업을 복사할 수도 있다.
 
            ㄴ 이 옵션 또한 백업으로 복구를 진행하면, 새로운 테이블이 생성된다.
-
-
 
 - DynamoDB - Amazon S3간 통합
 
@@ -346,25 +342,19 @@ API Gateway - Integrations High Level
 
 - Lambda Function
 
-           - 람다함수 지연 실행
+  - 람다함수 지연 실행
 
-           - 람다함수를 REST API로 노출시키는 일반적이고 간단한 방법
-
-
+  - 람다함수를 REST API로 노출시키는 일반적이고 간단한 방법
 
 - HTTP
 
            - HTTP endpoint를 노출시킬 수 있다.
-
-
 
 - AWS Service
 
            - 어떤 AWS API도 노출시킬 수 있다.
 
            - AWS Step Function workflow를 시작하거나, SQS에 메시지를 보낼 수도 있다.
-
-
 
 예시
 
@@ -444,8 +434,6 @@ EC2, ECS, 온프레미스 서버, API GateWay, SQS 큐등을 넣을 수 있다.
 
            다른 방법으로는 Cognito 앞에 ALB을 놓고 먼저 인증을 받고 나면 ALB가 타겟 그룹으로 리다이렉트하는 식으로 쓸 수도 있다.
 
-
-
 - Cognito Identity Pools (Federated Identity):
 
            - 앱에 등록된 사용자에게 임시 AWS 자격 증명을 제공하여 리소스에 직접 엑세스하게 해준다.
@@ -461,8 +449,6 @@ EC2, ECS, 온프레미스 서버, API GateWay, SQS 큐등을 넣을 수 있다.
            - 자격증명에 쓰인 IAM 정책은 Cognito에 정의되어 있다.
 
            - 인증된 사용자나 게스트 유저에게 Default IAM role을 부여할 수도 있다.
-
-
 
 IAM에도 사용자를 다루는 기능이 있지만, Cognito는 외부의 웹가 앱 사용자를 대상으로 한다.
 
